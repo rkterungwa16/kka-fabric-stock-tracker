@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tailor Fabric Tracker</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: center;
+      }
+      th {
+        background: #f4f4f4;
+      }
+      .out-of-stock {
+        background-color: #ffcccc;
+        font-weight: bold;
+      }
+      .form-section {
+        margin-bottom: 20px;
+      }
+      label {
+        margin-right: 10px;
+      }
+      button {
+        margin-top: 10px;
+        padding: 6px 12px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Fabric Stock Tracker</h2>
+
+    <!-- Add Fabric -->
+    <div class="form-section">
+      <h3>Add Fabric</h3>
+      <label>Fabric Name: <input id="fabricName" /></label>
+      <label>Length (m): <input id="fabricLength" type="number" /></label>
+      <label
+        >Width (in):
+        <select id="fabricWidth">
+          <option value="45">45"</option>
+          <option value="54">54"</option>
+          <option value="60">60"</option>
+        </select>
+      </label>
+      <button onclick="addFabric()">Add Fabric</button>
+    </div>
+
+    <!-- Record Job -->
+    <div class="form-section">
+      <h3>Record Shirt Job</h3>
+      <label
+        >Fabric:
+        <select id="jobFabric"></select>
+      </label>
+      <label
+        >Size:
+        <select id="shirtSize">
+          <option value="S">Small</option>
+          <option value="M">Medium</option>
+          <option value="L">Large</option>
+          <option value="XL">XL</option>
+        </select>
+      </label>
+      <label
+        >Sleeve:
+        <select id="sleeveType">
+          <option value="short">Short Sleeve</option>
+          <option value="long">Long Sleeve</option>
+        </select>
+      </label>
+      <button onclick="recordJob()">Use Fabric</button>
+    </div>
+
+    <!-- Fabric Table -->
+    <h3>Fabric Inventory</h3>
+    <button onclick="downloadFabricCSV()">
+      Download Fabric Inventory (CSV)
+    </button>
+    <table id="fabricTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Width</th>
+          <th>Total Bought (m)</th>
+          <th>Remaining (m)</th>
+          <th>Status</th>
+          <th>Added</th>
+          <th>Last Updated</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <!-- Job History -->
+    <h3>Job History</h3>
+    <button onclick="downloadJobCSV()">Download Job History (CSV)</button>
+    <table id="jobTable">
+      <thead>
+        <tr>
+          <th>Fabric</th>
+          <th>Size</th>
+          <th>Sleeve</th>
+          <th>Fabric Used (m)</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      let fabrics = [];
+      let jobHistory = [];
+
+      // Load saved data
+      window.onload = function () {
+        const savedFabrics = localStorage.getItem("fabrics");
+        const savedJobs = localStorage.getItem("jobHistory");
+
+        if (savedFabrics) fabrics = JSON.parse(savedFabrics);
+        if (savedJobs) jobHistory = JSON.parse(savedJobs);
+
+        updateFabricDropdown();
+        renderFabricTable();
+        renderJobTable();
+      };
+
+      // Save data
+      function saveData() {
+        localStorage.setItem("fabrics", JSON.stringify(fabrics));
+        localStorage.setItem("jobHistory", JSON.stringify(jobHistory));
+      }
+
+      // Usage rules by width, size, sleeve
+      const usageRules = {
+        45: {
+          short: { S: 2.2, M: 2.4, L: 2.6, XL: 2.8 },
+          long: { S: 2.5, M: 2.7, L: 3.0, XL: 3.2 },
+        },
+        54: {
+          short: { S: 2.0, M: 2.2, L: 2.4, XL: 2.6 },
+          long: { S: 2.3, M: 2.5, L: 2.7, XL: 3.0 },
+        },
+        60: {
+          short: { S: 1.8, M: 2.0, L: 2.2, XL: 2.4 },
+          long: { S: 2.2, M: 2.4, L: 2.6, XL: 2.8 },
+        },
+      };
+
+      function addFabric() {
+        const name = document.getElementById("fabricName").value;
+        const length = parseFloat(
+          document.getElementById("fabricLength").value
+        );
+        const width = parseInt(document.getElementById("fabricWidth").value);
+
+        if (!name || isNaN(length) || length <= 0) {
+          alert("Please enter valid fabric details");
+          return;
+        }
+
+        const now = new Date().toLocaleString();
+        fabrics.push({
+          name,
+          width,
+          total: length,
+          remaining: length,
+          added: now,
+          updated: now,
+        });
+
+        saveData();
+        updateFabricDropdown();
+        renderFabricTable();
+
+        // Clear inputs
+        document.getElementById("fabricName").value = "";
+        document.getElementById("fabricLength").value = "";
+      }
+
+      function updateFabricDropdown() {
+        const dropdown = document.getElementById("jobFabric");
+        dropdown.innerHTML = "";
+        fabrics.forEach((fabric, index) => {
+          dropdown.innerHTML += `<option value="${index}">${fabric.name}</option>`;
+        });
+      }
+
+      function recordJob() {
+        const fabricIndex = document.getElementById("jobFabric").value;
+        const size = document.getElementById("shirtSize").value;
+        const sleeve = document.getElementById("sleeveType").value;
+
+        if (fabricIndex === "" || fabrics[fabricIndex] === undefined) {
+          alert("No fabric selected!");
+          return;
+        }
+
+        const fabric = fabrics[fabricIndex];
+        const used = usageRules[fabric.width][sleeve][size];
+        const now = new Date().toLocaleString();
+
+        if (fabric.remaining >= used) {
+          fabric.remaining -= used;
+        } else {
+          alert(`${fabric.name} is out of stock for this job!`);
+          fabric.remaining = 0;
+        }
+
+        fabric.updated = now;
+
+        // Record job history
+        jobHistory.push({
+          fabric: fabric.name,
+          size,
+          sleeve,
+          used,
+          timestamp: now,
+        });
+
+        saveData();
+        renderFabricTable();
+        renderJobTable();
+      }
+
+      function renderFabricTable() {
+        const tbody = document.querySelector("#fabricTable tbody");
+        tbody.innerHTML = "";
+        fabrics.forEach((fabric) => {
+          const status = fabric.remaining > 0 ? "Available" : "Out of Stock";
+          const rowClass = fabric.remaining > 0 ? "" : "out-of-stock";
+          tbody.innerHTML += `
+        <tr class="${rowClass}">
+          <td>${fabric.name}</td>
+          <td>${fabric.width}"</td>
+          <td>${fabric.total.toFixed(1)}</td>
+          <td>${fabric.remaining.toFixed(1)}</td>
+          <td>${status}</td>
+          <td>${fabric.added}</td>
+          <td>${fabric.updated}</td>
+        </tr>
+      `;
+        });
+      }
+
+      function renderJobTable() {
+        const tbody = document.querySelector("#jobTable tbody");
+        tbody.innerHTML = "";
+        jobHistory.forEach((job) => {
+          tbody.innerHTML += `
+        <tr>
+          <td>${job.fabric}</td>
+          <td>${job.size}</td>
+          <td>${job.sleeve}</td>
+          <td>${job.used.toFixed(1)}</td>
+          <td>${job.timestamp}</td>
+        </tr>
+      `;
+        });
+      }
+
+      function downloadFabricCSV() {
+        if (fabrics.length === 0) {
+          alert("No fabric data to export!");
+          return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent +=
+          "Name,Width,Total Bought (m),Remaining (m),Status,Added,Last Updated\n";
+
+        fabrics.forEach((fabric) => {
+          const status = fabric.remaining > 0 ? "Available" : "Out of Stock";
+          csvContent += `${fabric.name},${fabric.width}",${fabric.total},${fabric.remaining},${status},${fabric.added},${fabric.updated}\n`;
+        });
+
+        downloadCSVFile(csvContent, "fabric_inventory.csv");
+      }
+
+      function downloadJobCSV() {
+        if (jobHistory.length === 0) {
+          alert("No job history to export!");
+          return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Fabric,Size,Sleeve,Fabric Used (m),Timestamp\n";
+
+        jobHistory.forEach((job) => {
+          csvContent += `${job.fabric},${job.size},${job.sleeve},${job.used},${job.timestamp}\n`;
+        });
+
+        downloadCSVFile(csvContent, "job_history.csv");
+      }
+
+      function downloadCSVFile(content, filename) {
+        const encodedUri = encodeURI(content);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    </script>
+  </body>
+</html>
