@@ -1,0 +1,33 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+th {
+  background: #f4f4f4;
+}
+.out-of-stock {
+  background-color: #ffcccc;
+  font-weight: bold;
+}
+.form-section {
+  margin-bottom: 20px;
+}
+label {
+  margin-right: 10px;
+}
+button {
+  margin-top: 10px;
+  padding: 6px 12px;
+  cursor: pointer;
+}

@@ -1,0 +1,24 @@
+{
+  "name": "kka-fabric-stock-tracker",
+  "version": "1.0.0",
+  "description": "track fabric stock",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rkterungwa16/kka-fabric-stock-tracker.git"
+  },
+  "keywords": [
+    "fabric",
+    "stock",
+    "fashion"
+  ],
+  "author": "Terungwa Kombol",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rkterungwa16/kka-fabric-stock-tracker/issues"
+  },
+  "homepage": "https://github.com/rkterungwa16/kka-fabric-stock-tracker#readme"
+}
